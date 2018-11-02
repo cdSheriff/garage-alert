@@ -9,4 +9,4 @@ Also sparkfun weather shield for monitoring the temp and humidity down there dur
 Starting with Adafruit rfm69hcw 900
 25mA draw when listening
 10mA when asleep
-0.3mA when using sleepdog package
+0.3mA when using sleepdog package https://github.com/adafruit/Adafruit_SleepyDog
