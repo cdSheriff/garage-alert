@@ -12,7 +12,7 @@ powered by 500mAh battery
 10mA when asleep, 50 hours with sleepy time
 0.3mA when using sleepdog package https://github.com/adafruit/Adafruit_SleepyDog, 1600 hours if super asleep
 
-Have a battery powered device in the garage with sensors. Default is super sleep, wake every X minutes and listen for a short period, then go back to super sleep
+Have a battery powered device in the garage with sensors. Default is super sleep, wake every X minutes and listen for a short period, then go back to super sleep /n
 Have a wall powered unit that when activated, sends a signal every X seconds to request data
 Garage unit receives request, and send data back (sending costs energy, so sending would be a power expensive default). Goes back to super sleep
 Wall unit receives data and displays results
