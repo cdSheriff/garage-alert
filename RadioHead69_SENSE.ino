@@ -39,7 +39,7 @@ RHReliableDatagram rf69_manager(rf69, HOME);
 
 int16_t packetnum = 0;  // packet counter, we increment per xmission
 
-int reedState = 0; // reed sensor starts open
+uint8_t reedState[] = {0, 0}; // reed sensor starts open
 
 void setup() 
 {
@@ -47,7 +47,8 @@ void setup()
   //while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
 
   pinMode(LED, OUTPUT);
-  pinMode(A0, INPUT); // reed switch     
+  pinMode(A0, INPUT_PULLUP); // reed switch N/O
+  pinMode(A1, INPUT_PULLUP); // reed switch N/C
   pinMode(RFM69_RST, OUTPUT);
   digitalWrite(RFM69_RST, LOW);
 
@@ -88,8 +89,8 @@ void setup()
 
 // Dont put this on the stack:
 //uint8_t data[] = "And hello back to you";
-uint8_t dataOpen[] = "Door open";
-uint8_t dataClosed[] = "Door closed";
+//uint8_t dataOpen[] = "Door open";
+//uint8_t dataClosed[] = "Door closed";
 // Dont put this on the stack:
 uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
 
@@ -115,13 +116,28 @@ void loop() {
 //        Serial.println("Sending failed (no ack)");
 
 //       Test reed sensor, send response based on reed sensor status
-      if (digitalRead(A0) == HIGH) {
-        if (!rf69_manager.sendtoWait(dataOpen, sizeof(dataClosed), from))
+      if (digitalRead(A0) == HIGH && digitalRead(A1) == LOW) {
+        reedState[0] = 0;
+        reedState[1] = 1;
+//          Serial.println(sizeof(reedState));
+        for(int i = 0; i < sizeof(reedState); i++)
+        {
+          Serial.println(reedState[i]);
+        }
+        if (!rf69_manager.sendtoWait(reedState, sizeof(reedState), from))
+        Serial.println("Sending failed (no ack)");
+      } else if (digitalRead(A0) == LOW && digitalRead(A1) == HIGH) {
+        reedState[0] = 1;
+        reedState[1] = 0;
+        if (!rf69_manager.sendtoWait(reedState, sizeof(reedState), from))
         Serial.println("Sending failed (no ack)");
       } else {
-        if (!rf69_manager.sendtoWait(dataClosed, sizeof(dataOpen), from))
+        reedState[0] = 0;
+        reedState[1] = 0;
+        if (!rf69_manager.sendtoWait(reedState, sizeof(reedState), from))
         Serial.println("Sending failed (no ack)");
       };
+//      }
     };
   };
 };

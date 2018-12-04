@@ -25,7 +25,8 @@
 #define RFM69_INT     3
 #define RFM69_RST     4
 #define LED           13
-#define REED          A0
+#define RED           A0
+#define GREEN         A1
 
 // Singleton instance of the radio driver
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
@@ -34,14 +35,16 @@ RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, HOME);
 
 
-int16_t packetnum = 0;  // packet counter, we increment per xmission
+int16_t packetnum = 0;  // increment each packet sent, do I care though?
 
 void setup() 
 {
   Serial.begin(115200);
   //while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
 
-  pinMode(LED, OUTPUT);     
+  pinMode(LED, OUTPUT);
+  pinMode(RED, OUTPUT);
+  pinMode(GREEN, OUTPUT);     
   pinMode(RFM69_RST, OUTPUT);
   digitalWrite(RFM69_RST, LOW);
 
@@ -73,51 +76,55 @@ void setup()
   uint8_t key[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
   rf69.setEncryptionKey(key);
-  
-  pinMode(LED, OUTPUT);
 
   Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
 }
 
 
 // Dont put this on the stack:
-uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
-uint8_t data[] = "  OK";
+//uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
+//uint8_t buf[] = {0,0};
+//uint8_t data[] = "  OK";
+uint8_t data[] = {0,0};
 
 void loop() {
-  delay(1000);  // Wait 1 second between transmits, could also 'sleep' here!
+  delay(4000);  // 4 second pause between asks
 
-  char radiopacket[20] = "Hello World #";
+  char radiopacket[20] = "Door check #";
   itoa(packetnum++, radiopacket+13, 10);
   Serial.print("Sending "); Serial.println(radiopacket);
   
   // Send a message to the DESTINATION!
   if (rf69_manager.sendtoWait((uint8_t *)radiopacket, strlen(radiopacket), DEST)) {
     // Now wait for a reply from the server
-    uint8_t len = sizeof(buf);
+    uint8_t len = sizeof(data);
     uint8_t from;   
-    if (rf69_manager.recvfromAckTimeout(buf, &len, 2000, &from)) {
-      buf[len] = 0; // zero out remaining string
-      
-      Serial.print("Got reply from #"); Serial.print(from);
+    if (rf69_manager.recvfromAckTimeout((uint8_t*)&data, &len, 2000, &from)) {
+
+      Serial.print("Ack from #"); Serial.print(from);
       Serial.print(" [RSSI :");
       Serial.print(rf69.lastRssi());
-      Serial.print("] : ");
-      Serial.println((char*)buf);     
-      Blink(LED, 40, 3); //blink LED 3 times, 40ms between blinks
+      Serial.println("]");
+      
+      if (data[0] == 0 && data[1] == 1) { // door is open
+        Blink(RED, 200, 1);
+      } else if (data[0] == 1 && data[1] == 0) { // door is closed
+        Blink(GREEN, 200, 1);
+      }
+      Blink(LED, 40, 3); // board LED to confirm its doing worky things
     } else {
-      Serial.println("No reply, is anyone listening?");
+      Serial.println("No reply :(");
     }
   } else {
     Serial.println("Sending failed (no ack)");
   }
 }
 
-void Blink(byte PIN, byte DELAY_MS, byte loops) {
+void Blink(byte PIN, byte MS, byte loops) { // LED pin, delay in milliseconds, number of blinks
   for (byte i=0; i<loops; i++)  {
     digitalWrite(PIN,HIGH);
-    delay(DELAY_MS);
+    delay(MS);
     digitalWrite(PIN,LOW);
-    delay(DELAY_MS);
+    delay(MS);
   }
 }
