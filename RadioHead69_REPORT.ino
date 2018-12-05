@@ -13,23 +13,19 @@
 #include <RHReliableDatagram.h>
 /************ Radio Setup ***************/
 
-// Recommended 868 or 915
-#define RF69_FREQ 915.0
 
-// Address to send packets to!
-#define DEST   1
-// Who am I
-#define HOME     2
-
-#define RFM69_CS      8
-#define RFM69_INT     3
-#define RFM69_RST     4
+#define frequency 915.0       // Recommended 868 or 915
+#define DEST          1       // Address to send packets to!
+#define HOME          2       // Who am I
+#define radio_chipSelect  8
+#define radio_interrupt   3
+#define radio_reset   4
 #define LED           13
 #define RED           A0
 #define GREEN         A1
 
 // Singleton instance of the radio driver
-RH_RF69 rf69(RFM69_CS, RFM69_INT);
+RH_RF69 rf69(radio_chipSelect, radio_interrupt);
 
 // Class to manage message delivery and receipt, using the driver declared above
 RHReliableDatagram rf69_manager(rf69, HOME);
@@ -40,21 +36,20 @@ int16_t packetnum = 0;  // increment each packet sent, do I care though?
 void setup() 
 {
   Serial.begin(115200);
-  //while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
 
   pinMode(LED, OUTPUT);
   pinMode(RED, OUTPUT);
   pinMode(GREEN, OUTPUT);     
-  pinMode(RFM69_RST, OUTPUT);
-  digitalWrite(RFM69_RST, LOW);
+  pinMode(radio_reset, OUTPUT);
+  digitalWrite(radio_reset, LOW);
 
   Serial.println("Feather Addressed RFM69 TX Test!");
   Serial.println();
 
-  // manual reset
-  digitalWrite(RFM69_RST, HIGH);
+  // manual reset (literally pressing the reset button by assigning it a high value)
+  digitalWrite(radio_reset, HIGH);
   delay(10);
-  digitalWrite(RFM69_RST, LOW);
+  digitalWrite(radio_reset, LOW);
   delay(10);
   
   if (!rf69_manager.init()) {
@@ -62,29 +57,24 @@ void setup()
     while (1);
   }
   Serial.println("RFM69 radio init OK!");
-  // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM (for low power module)
-  // No encryption
-  if (!rf69.setFrequency(RF69_FREQ)) {
+  // Defaults to 434.0MHz, modulation GFSK_Rb250Fd250, 13dB, no encryption
+  // So we need to set freq, power, and encryption key because those are all wrong
+  if (!rf69.setFrequency(frequency)) {
     Serial.println("setFrequency failed");
   }
 
-  // If you are using a high power RF69 eg RFM69HW, you *must* set a Tx power with the
-  // ishighpowermodule flag set like this:
-  rf69.setTxPower(20, true);  // range from 14-20 for power, 2nd arg must be true for 69HCW
+  // Have to set dB. range 14-20. Always true because reasons
+  rf69.setTxPower(20, true);
 
-  // The encryption key has to be the same as the one in the server
-  uint8_t key[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+  // Encryption key. Set to zeros for GitHub. Change when uploading to boards
+  uint8_t key[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   rf69.setEncryptionKey(key);
 
-  Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
+  Serial.print("RFM69 radio @");  Serial.print((int)frequency);  Serial.println(" MHz");
 }
 
 
 // Dont put this on the stack:
-//uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
-//uint8_t buf[] = {0,0};
-//uint8_t data[] = "  OK";
 uint8_t data[] = {0,0};
 
 void loop() {
@@ -102,9 +92,7 @@ void loop() {
     if (rf69_manager.recvfromAckTimeout((uint8_t*)&data, &len, 2000, &from)) {
 
       Serial.print("Ack from #"); Serial.print(from);
-      Serial.print(" [RSSI :");
-      Serial.print(rf69.lastRssi());
-      Serial.println("]");
+      Serial.print(" [RSSI :"); Serial.print(rf69.lastRssi()); Serial.println("]");
       
       if (data[0] == 0 && data[1] == 1) { // door is open
         Blink(RED, 200, 1);

@@ -14,24 +14,17 @@
 
 /************ Radio Setup ***************/
 
-// recommended 868 or 915
-#define RF69_FREQ 915.0
 
-// who am i? (server address)
-#define HOME     1
-
-
-
-
-//#if defined(ARDUINO_SAMD_FEATHER_M0) // Feather M0 w/Radio
-#define RFM69_CS      8
-#define RFM69_INT     3
-#define RFM69_RST     4
+#define frequency 915.0       // recommended 868 or 915
+#define HOME          1       // who am i? (server address)
+#define radio_chipSelect  8
+#define radio_interrupt   3
+#define radio_reset   4
 #define LED           13
-//#endif
+
 
 // Singleton instance of the radio driver
-RH_RF69 rf69(RFM69_CS, RFM69_INT);
+RH_RF69 rf69(radio_chipSelect, radio_interrupt);
 
 // Class to manage message delivery and receipt, using the driver declared above
 RHReliableDatagram rf69_manager(rf69, HOME);
@@ -49,16 +42,16 @@ void setup()
   pinMode(LED, OUTPUT);
   pinMode(A0, INPUT_PULLUP); // reed switch N/O
   pinMode(A1, INPUT_PULLUP); // reed switch N/C
-  pinMode(RFM69_RST, OUTPUT);
-  digitalWrite(RFM69_RST, LOW);
+  pinMode(radio_reset, OUTPUT);
+  digitalWrite(radio_reset, LOW);
 
   Serial.println("Feather Addressed RFM69 RX Test!");
   Serial.println();
 
-  // manual reset
-  digitalWrite(RFM69_RST, HIGH);
+  // manual reset (literally pressing the reset button by assigning it a high value)
+  digitalWrite(radio_reset, HIGH);
   delay(10);
-  digitalWrite(RFM69_RST, LOW);
+  digitalWrite(radio_reset, LOW);
   delay(10);
   
   if (!rf69_manager.init()) {
@@ -66,38 +59,29 @@ void setup()
     while (1);
   }
   Serial.println("RFM69 radio init OK!");
-  // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM (for low power module)
-  // No encryption
-  if (!rf69.setFrequency(RF69_FREQ)) {
+  // Defaults to 434.0MHz, modulation GFSK_Rb250Fd250, 13dB, no encryption
+  // So we need to set freq, power, and encryption key because those are all wrong
+  if (!rf69.setFrequency(frequency)) {
     Serial.println("setFrequency failed");
   }
 
-  // If you are using a high power RF69 eg RFM69HW, you *must* set a Tx power with the
-  // ishighpowermodule flag set like this:
-  rf69.setTxPower(20, true);  // range from 14-20 for power, 2nd arg must be true for 69HCW
+  // Have to set dB. range 14-20. Always true because reasons
+  rf69.setTxPower(20, true);
 
-  // The encryption key has to be the same as the one in the server
-  uint8_t key[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+  // Encryption key. Set to zeros for GitHub. Change when uploading to boards
+  uint8_t key[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   rf69.setEncryptionKey(key);
-  
-  pinMode(LED, OUTPUT);
 
-  Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
+  Serial.print("RFM69 radio @");  Serial.print((int)frequency);  Serial.println(" MHz");
 }
 
-
-// Dont put this on the stack:
-//uint8_t data[] = "And hello back to you";
-//uint8_t dataOpen[] = "Door open";
-//uint8_t dataClosed[] = "Door closed";
 // Dont put this on the stack:
 uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
 
 void loop() {
   if (rf69_manager.available())
   {
-    // Wait for a message addressed to us from the client
+    // Get message from base, and print it along with base ID and RSSI
     uint8_t len = sizeof(buf);
     uint8_t from;
     if (rf69_manager.recvfromAck(buf, &len, &from)) {
@@ -108,46 +92,40 @@ void loop() {
       Serial.print(rf69.lastRssi());
       Serial.print("] : ");
       Serial.println((char*)buf);
-      Blink(LED, 40, 3); //blink LED 3 times, 40ms between blinks
+      Blink(LED, 40, 3); //board blinking to confirm it is doing talky things
 
       
-      // Send a reply back to the originator client
-//      if (!rf69_manager.sendtoWait(data, sizeof(data), from))
-//        Serial.println("Sending failed (no ack)");
+      // Evaluate door position, and reply to base
 
-//       Test reed sensor, send response based on reed sensor status
+      // Test reed sensor, send response based on reed sensor status
       if (digitalRead(A0) == HIGH && digitalRead(A1) == LOW) {
         reedState[0] = 0;
         reedState[1] = 1;
-//          Serial.println(sizeof(reedState));
-        for(int i = 0; i < sizeof(reedState); i++)
-        {
-          Serial.println(reedState[i]);
-        }
         if (!rf69_manager.sendtoWait(reedState, sizeof(reedState), from))
         Serial.println("Sending failed (no ack)");
+        
       } else if (digitalRead(A0) == LOW && digitalRead(A1) == HIGH) {
         reedState[0] = 1;
         reedState[1] = 0;
         if (!rf69_manager.sendtoWait(reedState, sizeof(reedState), from))
         Serial.println("Sending failed (no ack)");
+        
       } else {
         reedState[0] = 0;
         reedState[1] = 0;
         if (!rf69_manager.sendtoWait(reedState, sizeof(reedState), from))
         Serial.println("Sending failed (no ack)");
       };
-//      }
     };
   };
 };
 
 
-void Blink(byte PIN, byte DELAY_MS, byte loops) {
+void Blink(byte PIN, byte MS, byte loops) { // LED pin, delay in milliseconds, number of blinks
   for (byte i=0; i<loops; i++)  {
     digitalWrite(PIN,HIGH);
-    delay(DELAY_MS);
+    delay(MS);
     digitalWrite(PIN,LOW);
-    delay(DELAY_MS);
+    delay(MS);
   }
 }
