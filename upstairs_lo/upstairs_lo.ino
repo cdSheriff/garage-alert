@@ -27,18 +27,18 @@
 // Singleton instance of the radio driver
 RH_RF69 rf69(radio_CS, radio_INT);
 
-int16_t packetnum = 0;  // packet counter, we increment per xmission
+//int16_t packetnum = 0;  // packet counter, we increment per xmission
 
 int8_t reedState[] = {0, 0}; // in case I wanna save the sent info
 
 unsigned long previousMils = 0; // update the time counter this way
 
-const long timeoutSec = 15*60*1000; // set the timeout in milliseconds
+const long timeoutMils = 15*60*1000; // set the timeout in milliseconds
 
 void setup() 
 {
 //  Serial.begin(115200);
-  //while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
+  //while (!Serial) { delay(1); } // wait until serial console is open
 
   // set the onboard LED as powerable for status blinky or whatever
   pinMode(LED, OUTPUT);
@@ -82,6 +82,10 @@ void setup()
 //  pinMode(LED, OUTPUT);
 
 //  Serial.print("RFM69 radio @");  Serial.print((int)frequency);  Serial.println(" MHz");
+
+// initialize lights as error for sanity
+  digitalWrite(GREEN, HIGH);
+  digitalWrite(RED, HIGH);
 }
 
 
@@ -89,7 +93,11 @@ void loop() {
 
   unsigned long currentMils = millis();
 
-  if (currentMils - previousMils < interval) {
+//  Serial.println("starting loop");
+  
+  if (currentMils - previousMils < timeoutMils) {
+
+//    Serial.println("current mils still low");
 
 
     if (rf69.available()) {
@@ -115,10 +123,12 @@ void loop() {
   } else {
     Serial.println("timed out. Error code lights and restart listening");
     digitalWrite(RED, HIGH);
-    digitalWrite(GREEN, LOW);
+    digitalWrite(GREEN, HIGH);
 
     previousMils = currentMils;
   }
+
+//  Serial.println("end main");
 }
 
 
@@ -131,15 +141,15 @@ void Blink(byte PIN, byte DELAY_MS, byte loops) {
   }
 }
 
-void unBlink(byte PIN, byte MS, byte loops) {
-  
-}
+//void unBlink(byte PIN, byte MS, byte loops) {
+//  
+//}
+//
+//void timeOut(byte seconds) {
+//  
+//}
 
-void timeOut(byte seconds) {
-  
-}
-
-void testBuf(uint8_t BUF) {
+void testBuf(uint8_t* BUF) {
   if (BUF[0] == 0 && BUF[1] == 1) { // open door
     Serial.println("door open!");
     digitalWrite(RED, HIGH);

@@ -92,7 +92,9 @@ void setup() {
 void loop() {
   doorTest();
 //  Blink(LED, 50, 1);
-  Sleep((int) 600/8);
+// pass mathed sleep cycles
+// passing raw seconds was one possible cuase of sleep timing error
+  Sleep((int) 600/8); 
 }
 
 void Blink(byte PIN, byte DELAY_MS, byte loops) {
@@ -121,8 +123,9 @@ void doorTest() {
 }
 
 void Sleep(int sleepCycles) {
+  // NOTE: input should be int
+  // byte was causing error (or maybe mathing sleep cycles here did, unsure)
   sleepCyclesElapsed = 0;
-//  sleepCycles = (int) seconds / 8;
 
   while (sleepCyclesElapsed < sleepCycles) {
     Watchdog.sleep(8000);
