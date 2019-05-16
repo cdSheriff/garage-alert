@@ -1,41 +1,48 @@
 #include <Adafruit_SleepyDog.h>
+//#include <arm/sleep.h>
 #include <SPI.h>
 
 // the setup function runs once when you press reset or power the board
 void setup() {
-  // initialize digital pin LED_BUILTIN as an output.
+  // initialize pins
   pinMode(LED_BUILTIN, OUTPUT);
+
+  // set sleepy type (full standby I think?)
+  SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+
+  delay(20000);
+  
 }
 
-// the loop function runs over and over again forever
 
-void sleep() {
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN); // select full powerdown. Only watchdog can wake
-
-  power_adc_disable(); // turn off ADC too
-
-  sleep_mode(); // this turns on sleep
-
-  sleep_disable(); // turns off sleep
-  power_all_enable();
-}
-
-void blinky() {
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(500);
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(500);
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(500);
-  digitalWrite(LED_BUILTIN, LOW);
-//  delay(500);
+void blinky(byte MS, byte loops) { // LED pin, delay in milliseconds, number of blinks
+  for (byte i=0; i<loops; i++)  {
+    digitalWrite(LED_BUILTIN,HIGH);
+    delay(MS);
+    digitalWrite(LED_BUILTIN,LOW);
+    delay(MS);
+  }
 }
 
 void loop() {
-  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(2000);                       // wait for a second
-  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
-  delay(4000);                       // wait for a second
+  
+  
+  blinky(500, 10);
+  delay(2000);
 
-  sleep()
+  blinky(500, 1);
+//  int sleepMS = Watchdog.enable(8000);
+  int cycles_elapsed = 0;
+  int cycles = ceil(60 / 8);
+
+  while (cycles_elapsed < cycles) {
+    Watchdog.sleep(8000);
+    cycles_elapsed ++;
+  }
+//  int sleepMS = Watchdog.sleep(8000);
+
+  
+//  __WFI();
+  blinky(500, 2);
+  delay(2000);
 }
