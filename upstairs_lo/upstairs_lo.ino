@@ -120,6 +120,8 @@ void loop() {
         return;
       }
     }
+
+    previousMils = currentMils;
   } else {
     Serial.println("timed out. Error code lights and restart listening");
     digitalWrite(RED, HIGH);
