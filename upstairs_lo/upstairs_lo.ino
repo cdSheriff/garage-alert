@@ -23,6 +23,8 @@
 #define LED           13    // onboard LED pin
 #define RED           A0    // red light for door open
 #define GREEN         A1    // green light for door closed
+#define RED_PI        A2    // door open pin to Pi
+#define GREEN_PI      A3    // door closed pin to Pi
 
 // Singleton instance of the radio driver
 RH_RF69 rf69(radio_CS, radio_INT);
@@ -43,7 +45,9 @@ void setup()
   // set the onboard LED as powerable for status blinky or whatever
   pinMode(LED, OUTPUT);
   pinMode(RED, OUTPUT);
-  pinMode(GREEN, OUTPUT);     
+  pinMode(GREEN, OUTPUT);
+  pinMode(RED_PI, OUTPUT);
+  pinMode(GREEN_PI, OUTPUT);     
 
   // setting the radio as powerable, unpower the radio reset pin
   pinMode(radio_RST, OUTPUT);
@@ -86,6 +90,8 @@ void setup()
 // initialize lights as error for sanity
   digitalWrite(GREEN, HIGH);
   digitalWrite(RED, HIGH);
+  digitalWrite(GREEN_PI, HIGH);
+  digitalWrite(RED_PI, HIGH);
 }
 
 
@@ -126,6 +132,8 @@ void loop() {
     Serial.println("timed out. Error code lights and restart listening");
     digitalWrite(RED, HIGH);
     digitalWrite(GREEN, HIGH);
+    digitalWrite(RED_PI, HIGH);
+    digitalWrite(GREEN_PI, HIGH);
 
     previousMils = currentMils;
   }
@@ -156,14 +164,20 @@ void testBuf(uint8_t* BUF) {
     Serial.println("door open!");
     digitalWrite(RED, HIGH);
     digitalWrite(GREEN, LOW);
+    digitalWrite(RED_PI, HIGH);
+    digitalWrite(GREEN_PI, LOW);
   } else if (BUF[0] == 1 && BUF[1] == 0) {
     Serial.println("door closed!");
     digitalWrite(RED, LOW);
     digitalWrite(GREEN, HIGH);
+    digitalWrite(RED_PI, LOW);
+    digitalWrite(GREEN_PI, HIGH);
   } else if (BUF[0] == 0 && BUF[1] == 0) {
     Serial.println("sensor error!");
     digitalWrite(RED, HIGH);
     digitalWrite(GREEN, HIGH);
+    digitalWrite(RED_PI, HIGH);
+    digitalWrite(GREEN_PI, HIGH);
   } else {
     Serial.println("sent garbage!");
   };
