@@ -23,19 +23,21 @@
 #define LED           13    // onboard LED pin
 #define RED           A0    // red light for door open
 #define GREEN         A1    // green light for door closed
-#define RED_PI        A2    // door open pin to Pi
-#define GREEN_PI      A3    // door closed pin to Pi
+#define BLUE          A2    // blue light for power to uno
+//#define RED_PI        A3    // door open pin to Pi
+//#define GREEN_PI      A4    // door closed pin to Pi
+//#define BLUE_PI       A5    // power from uno to Pi
 
 // Singleton instance of the radio driver
 RH_RF69 rf69(radio_CS, radio_INT);
 
 //int16_t packetnum = 0;  // packet counter, we increment per xmission
 
-int8_t reedState[] = {0, 0}; // in case I wanna save the sent info
+int8_t reedState[] = {0, 0, 0, 0}; // in case I wanna save the sent info
 
 unsigned long previousMils = 0; // update the time counter this way
 
-const long timeoutMils = 15*60*1000; // set the timeout in milliseconds
+const long timeoutMils = 2*60*1000; // set the timeout in milliseconds
 
 void setup() 
 {
@@ -46,8 +48,10 @@ void setup()
   pinMode(LED, OUTPUT);
   pinMode(RED, OUTPUT);
   pinMode(GREEN, OUTPUT);
-  pinMode(RED_PI, OUTPUT);
-  pinMode(GREEN_PI, OUTPUT);     
+  pinMode(BLUE, OUTPUT);
+//  pinMode(RED_PI, OUTPUT);
+//  pinMode(GREEN_PI, OUTPUT);   
+//  pinMode(BLUE_PI, OUTPUT);  
 
   // setting the radio as powerable, unpower the radio reset pin
   pinMode(radio_RST, OUTPUT);
@@ -87,11 +91,17 @@ void setup()
 
 //  Serial.print("RFM69 radio @");  Serial.print((int)frequency);  Serial.println(" MHz");
 
-// initialize lights as error for sanity
-  digitalWrite(GREEN, HIGH);
-  digitalWrite(RED, HIGH);
-  digitalWrite(GREEN_PI, HIGH);
-  digitalWrite(RED_PI, HIGH);
+// blink lights for sanity
+  Blink(RED, 500, 3);
+  Blink(GREEN, 500, 3);
+  Blink(BLUE, 500, 3);
+//  digitalWrite(GREEN, HIGH);
+//  digitalWrite(RED, HIGH);
+//  digitalWrite(BLUE, HIGH);
+  Serial.println("initialized");
+//  digitalWrite(GREEN_PI, HIGH);
+//  digitalWrite(RED_PI, HIGH);
+//  digitalWrite(BLUE_PI, HIGH);
 }
 
 
@@ -115,25 +125,29 @@ void loop() {
       if (rf69.recv(buf, &len)) {
         if (!len) return;
         Serial.println("gonna blink to show it came!");
-  //      Blink(LED, 200, 6);
+//        Blink(LED, 200, 6);
         digitalWrite(LED, HIGH);
   
-        testBuf(buf);
+//        testBuf(buf);
+        displayBuf(buf);
   
         digitalWrite(LED, LOW);
       } else {
         Serial.println("timeout!");
         return;
       }
+      previousMils = currentMils;
     }
 
-    previousMils = currentMils;
+//    previousMils = currentMils;
   } else {
     Serial.println("timed out. Error code lights and restart listening");
     digitalWrite(RED, HIGH);
     digitalWrite(GREEN, HIGH);
-    digitalWrite(RED_PI, HIGH);
-    digitalWrite(GREEN_PI, HIGH);
+    digitalWrite(BLUE, HIGH);
+//    digitalWrite(RED_PI, HIGH);
+//    digitalWrite(GREEN_PI, HIGH);
+//    digitalWrite(BLUE_PI, HIGH);
 
     previousMils = currentMils;
   }
@@ -159,26 +173,41 @@ void Blink(byte PIN, byte DELAY_MS, byte loops) {
 //  
 //}
 
-void testBuf(uint8_t* BUF) {
-  if (BUF[0] == 0 && BUF[1] == 1) { // open door
-    Serial.println("door open!");
-    digitalWrite(RED, HIGH);
-    digitalWrite(GREEN, LOW);
-    digitalWrite(RED_PI, HIGH);
-    digitalWrite(GREEN_PI, LOW);
-  } else if (BUF[0] == 1 && BUF[1] == 0) {
-    Serial.println("door closed!");
-    digitalWrite(RED, LOW);
-    digitalWrite(GREEN, HIGH);
-    digitalWrite(RED_PI, LOW);
-    digitalWrite(GREEN_PI, HIGH);
-  } else if (BUF[0] == 0 && BUF[1] == 0) {
-    Serial.println("sensor error!");
+void displayBuf(uint8_t* BUF) {
+  digitalWrite(RED, BUF[0]);
+  digitalWrite(GREEN, BUF[1]);
+  digitalWrite(BLUE, BUF[2]);
+//  digitalWrite(RED_PI, BUF[0]);
+//  digitalWrite(GREEN_PI, BUF[1]);
+//  digitalWrite(BLUE_PI, BUF[2]);
+
+  if (BUF[3] == 1) {
     digitalWrite(RED, HIGH);
     digitalWrite(GREEN, HIGH);
-    digitalWrite(RED_PI, HIGH);
-    digitalWrite(GREEN_PI, HIGH);
-  } else {
-    Serial.println("sent garbage!");
-  };
+    digitalWrite(BLUE, HIGH);
+  }
 }
+
+//void testBuf(uint8_t* BUF) {
+//  if (BUF[0] == 0 && BUF[1] == 1) { // open door
+//    Serial.println("door open!");
+//    digitalWrite(RED, HIGH);
+//    digitalWrite(GREEN, LOW);
+//    digitalWrite(RED_PI, HIGH);
+//    digitalWrite(GREEN_PI, LOW);
+//  } else if (BUF[0] == 1 && BUF[1] == 0) {
+//    Serial.println("door closed!");
+//    digitalWrite(RED, LOW);
+//    digitalWrite(GREEN, HIGH);
+//    digitalWrite(RED_PI, LOW);
+//    digitalWrite(GREEN_PI, HIGH);
+//  } else if (BUF[0] == 0 && BUF[1] == 0) {
+//    Serial.println("sensor error!");
+//    digitalWrite(RED, HIGH);
+//    digitalWrite(GREEN, HIGH);
+//    digitalWrite(RED_PI, HIGH);
+//    digitalWrite(GREEN_PI, HIGH);
+//  } else {
+//    Serial.println("sent garbage!");
+//  };
+//}

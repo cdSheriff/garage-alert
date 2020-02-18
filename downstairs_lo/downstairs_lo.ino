@@ -35,7 +35,7 @@ RH_RF69 rf69(radio_CS, radio_INT);
 
 //int16_t packetnum = 0;  // packet counter, we increment per xmission
 
-int8_t reedState[] = {0, 0};
+int8_t reedState[] = {0, 0, 0, 0};
 int sleepCyclesElapsed;
 int sleepCycles;
 
@@ -47,7 +47,8 @@ void setup() {
   // setting up the LED as a powerable thing, and defining the reed switch pins
   pinMode(LED, OUTPUT);
   pinMode(A0, INPUT_PULLUP); // reed switch N/O
-  pinMode(A1, INPUT_PULLUP); // reed switch N/C   
+  pinMode(A1, INPUT_PULLUP); // reed switch N/C
+  pinMode(A2, INPUT); // Uno power signal   
 
   // setting the radio as powerable, unpower the radio reset pin
   pinMode(radio_RST, OUTPUT);
@@ -81,7 +82,7 @@ void setup() {
 
   Serial.print("RFM69 radio @");  Serial.print((int)frequency);  Serial.println(" MHz");
 
-  Blink(LED, 200, 5);
+  Blink(LED, 1000, 10);
 //  delay(2000);
   delay(10000);
   digitalWrite(LED, LOW);
@@ -90,7 +91,9 @@ void setup() {
 
 
 void loop() {
-  doorTest();
+//  doorTest();
+//  Serial.println("starting loop");
+  garageTest();
 //  Blink(LED, 50, 1);
 // pass mathed sleep cycles
 // passing raw seconds was one possible cuase of sleep timing error
@@ -106,20 +109,28 @@ void Blink(byte PIN, byte DELAY_MS, byte loops) {
   }
 }
 
-void doorTest() {
-  if (digitalRead(A0) == HIGH && digitalRead(A1) == LOW) {
-    reedState[0] = 0;
-    reedState[1] = 1;
-    rf69.send((uint8_t *)reedState, sizeof(reedState));
-  } else if (digitalRead(A0) == LOW && digitalRead(A1) == HIGH) {
-    reedState[0] = 1;
-    reedState[1] = 0;
-    rf69.send((uint8_t *)reedState, sizeof(reedState));
-  } else {
-    reedState[0] = 0;
-    reedState[1] = 0;
-    rf69.send((uint8_t *)reedState, sizeof(reedState));
-  };
+//void doorTest() {
+//  if (digitalRead(A0) == HIGH && digitalRead(A1) == LOW) {
+//    reedState[0] = 0;
+//    reedState[1] = 1;
+//    rf69.send((uint8_t *)reedState, sizeof(reedState));
+//  } else if (digitalRead(A0) == LOW && digitalRead(A1) == HIGH) {
+//    reedState[0] = 1;
+//    reedState[1] = 0;
+//    rf69.send((uint8_t *)reedState, sizeof(reedState));
+//  } else {
+//    reedState[0] = 0;
+//    reedState[1] = 0;
+//    rf69.send((uint8_t *)reedState, sizeof(reedState));
+//  };
+//}
+
+void garageTest() {
+  reedState[0] = digitalRead(A0);
+  reedState[1] = digitalRead(A1);
+  reedState[2] = digitalRead(A2);
+  if(reedState[0] == reedState[1]) {reedState[3] = 1;} else {reedState[3] = 0;};
+  rf69.send((uint8_t *)reedState, sizeof(reedState));
 }
 
 void Sleep(int sleepCycles) {
